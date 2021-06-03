@@ -16,6 +16,8 @@ uint32_t CommandBuffer_Update(void*);
 __attribute__((aligned(0x20))) uint32_t CommandBuffer_Update(void* that) {
     uint32_t index;
     uint32_t qndex;
+    uint32_t layer;
+    uint32_t request;
     uint32_t actorPointer = 0;
     ActorManager_Params* actorParams = 0;
     Command* command;
@@ -56,34 +58,26 @@ __attribute__((aligned(0x20))) uint32_t CommandBuffer_Update(void* that) {
 
                     // if free return slot, spawn actor and set the data to the resulting pointer
                     if (qndex != COMMAND_MAX) {
-                        /*
-                            This way sucks, we're doing it manually
-                            // set the return pointer to the result of Actor_Spawn
-                            //cmdBuffer.returns[qndex].data[0] = Actor_Spawn(0xB5, 0, (Vec3f*)0x803E440C, *((uint8_t*)0x803F6A78), 0, 0, 0, 0);
-
-                            This way also sucks because it doesn't work, still doing it manually
-                            //actorPointer = ActorManager_CreateFast(0xB5, 0, (Vec3f*)0x803E440C, *((uint8_t*)0x803F6A78), 0, 0, 0, 0, 0);
-                        */
-
-                        retCommand->returnUUID = command->returnUUID;
-                        retCommand->type = COMMAND_TYPE_PUPPET_SPAWN;
-                        retCommand->data[0] = -1;
-                        retCommand->data[1] = 0xDEADDEAD;
-
+                        // use CreateAppend to get the game's unique id to detect when the actor is supposed to be spawned
+                        // we are spawning at Link's location, in Link's room
                         actorParams = ActorManager_CreateAppend(0, (Vec3f*)0x803E440C, *((uint8_t*)0x803F6A78), 0, 0, 0, 0xFFFFFFFF);
-                        if (actorParams == 0) {
-                            retCommand->data[2] = 1;
+                        layer = f_pc_layer__CurrentLayer();
+                        request = f_pc_stdcreate_req__Request(layer, 0xB5, 0, 0, actorParams);
+
+                        if (actorParams) {
+                            asm("nop");
+                            retCommand->data[0] = actorParams->uuid; // store this, it might be useful for the future
+                            asm("nop");
+                            retCommand->data[1] = command->returnUUID; // shovel return uuid into data so wwo doesn't think it is ready
+                            retCommand->data[2] = 0; // use as a framecount
+                            retCommand->type = COMMAND_TYPE_PUPPET_SPAWNING; //command->type;
+                            retCommand->returnUUID = 0;
                         }
                         else {
-                            actorPointer = f_pc_manager__FastCreate(0xB5, 0, 0, actorParams);
-                            retCommand->data[3] = (uint32_t)actorParams;
-                            if (actorPointer) {
-                                retCommand->data[0] = actorPointer;
-                                retCommand->data[1] = 0xBEEFBEEF;
-                            }
-                            else {
-                                retCommand->data[2] = 2;
-                            }
+                            // something went wrong, we won't be waiting for this actor
+                            retCommand->data[0] = -1;
+                            retCommand->data[1] = 0xDEADDEAD;
+                            retCommand->data[2] = actorParams->uuid;
                         }
                     }
 
@@ -102,6 +96,52 @@ __attribute__((aligned(0x20))) uint32_t CommandBuffer_Update(void* that) {
 
         // we iterated through all of the commands, assume there are no more commands to process
         cmdBuffer.count = 0;
+
+        for (index = 0; index < COMMAND_MAX; index++) {
+            retCommand = &cmdBuffer.returns[index];
+
+            switch (retCommand->type) {
+                // if actor is spawning
+                case COMMAND_TYPE_PUPPET_SPAWNING:
+                    // search for entity using uuid
+                    /*if (ActorManager_SearchByID(retCommand->data[0], &actorPointer)) {
+                        if (actorPointer) {
+                            retCommand->data[2] = retCommand->data[0]; // entity uuid
+                            retCommand->returnUUID = retCommand->data[1];
+                            retCommand->type = COMMAND_TYPE_PUPPET_SPAWN;
+                            retCommand->data[0] = actorPointer;
+                            retCommand->data[1] = 0xBEEFBEEF;
+                        }
+                    }
+                    else {
+                        retCommand->data[2]++; // Another frame without the actor
+                    }*/
+
+                    // reusing request, effectively is a boolean for the isCreating call
+                    request = f_pc_manager__IsCreating(retCommand->data[0]);
+                    if (request) {
+                        actorPointer = f_op_actor_iter__Judge(f_pc_searcher__JudgeByID, retCommand->data[0]);
+
+                        if (actorPointer) {
+                            retCommand->data[2] = retCommand->data[0]; // entity uuid
+                            retCommand->returnUUID = retCommand->data[1];
+                            retCommand->type = COMMAND_TYPE_PUPPET_SPAWN;
+                            retCommand->data[0] = actorPointer;
+                            retCommand->data[1] = 0xBEEFBEEF;
+                        }
+                        else {
+                            retCommand->data[2]++;
+                            retCommand->data[3] = 2;
+                        }
+                    }
+                    else {
+                        retCommand->data[2] = -1;
+                        retCommand->data[3] = 1;
+                    }
+
+                    break;
+            }
+        }
     }
 
     return returnIsPeek;

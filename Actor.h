@@ -5,12 +5,15 @@
 #include "inttypes.h"
 
 extern uint32_t ActorManager_SearchByID(uint32_t id, uint32_t* result);
+extern uint32_t f_op_actor_iter__Judge(uint32_t param_1, uint32_t param_2);
 extern struct ActorManager_Params* ActorManager_CreateAppend(uint32_t parameters, Vec3f* pPos, int roomNo, Vec3s* pAngle, Vec3f* pScale, uint8_t subtype, uint32_t);
 extern void Actor_Despawn(void* this);
 extern uint32_t ActorManager_Create(int16_t procName, uint32_t parameters, Vec3f* pPos, int roomNo, Vec3s* pAngle, Vec3f* pScale, uint8_t subtype, void* param_8);
 extern uint32_t ActorManager_CreateFast(uint16_t actorID, uint32_t parameters, Vec3f* pPos, int roomNo, Vec3s* pAngle, Vec3f* pScale, uint8_t subtype, void* pCallBack, void* pCallBackUserData);
 extern uint32_t f_pc_manager__FastCreate(uint16_t actorID, void* pCallBack, void* pCallBackUserData, struct ActorManager_Params* params);
+extern int f_pc_searcher__JudgeByID(uint32_t param_1, uint32_t param_2);
 extern uint32_t f_pc_layer__CurrentLayer(void);
+extern int32_t f_pc_manager__IsCreating(uint16_t actorID);
 extern uint32_t f_pc_stdcreate_req__Request(uint32_t param_1, int16_t param_2,uint32_t param_3, uint32_t param_4, uint32_t param_5);
 
 enum {
@@ -26,7 +29,6 @@ enum {
     GBANAME_PUSHABLEBLOCK = 61
 };
 
-// why is this compiled with wrong offsets??
 typedef struct {
     /* 0x00 */ uint32_t parameters;
     /* 0x04 */ Vec3f pos;
