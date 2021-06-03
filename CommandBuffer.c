@@ -16,10 +16,10 @@ __attribute__((aligned(0x20))) void CommandBuffer_Update(void* that) {
     uint32_t qndex;
     uint32_t layer;
     uint32_t request;
-    uint32_t fail;
     uint32_t actorPointer = 0;
     ActorManager_Params* actorParams = 0;
     Command* command;
+    CommandReturn* rvalue;
 
     // Since we are codecaving this function call, we need to actually call it with its original arguments before doing our stuff
     dCcS_Move(that);
@@ -28,7 +28,6 @@ __attribute__((aligned(0x20))) void CommandBuffer_Update(void* that) {
     for (index = 0; index < cmdBuffer.count; index++) {
         // shortcut to current command
         command = &cmdBuffer.commands[index];
-        fail = 0;
 
         // process this command based on its type
         switch(command->type) {
@@ -59,27 +58,19 @@ __attribute__((aligned(0x20))) void CommandBuffer_Update(void* that) {
                     layer = f_pc_layer__CurrentLayer();
                     request = f_pc_stdcreate_req__Request(layer, 0xB5, 0, 0, actorParams);
 
+                    // prepare to wait for actor spawn
                     if (actorParams) {
-                        if (ActorManager_SearchByID(actorParams->uuid, &actorPointer)) {
-                            if (actorPointer) {
-                                cmdBuffer.returns[qndex].data[0] = actorPointer;
-                                cmdBuffer.returns[qndex].data[1] = 0xBEEFBEEF;
-                                cmdBuffer.returns[qndex].data[2] = actorParams;
-                                cmdBuffer.returns[qndex].data[3] = actorParams->uuid;
-                                cmdBuffer.returns[qndex].type = command->type;
-                                cmdBuffer.returns[qndex].returnUUID = command->returnUUID;
-                            }
-                            else fail = 3;
-                        }
-                        else fail = 2;
+                        cmdBuffer.returns[qndex].data[0] = actorParams->uuid; // store this, it might be useful for the future
+                        cmdBuffer.returns[qndex].data[1] = command->returnUUID; // shovel return uuid into data so wwo doesn't think it is ready
+                        cmdBuffer.returns[qndex].data[2] = 0; // use as a framecount
+                        cmdBuffer.returns[qndex].type = COMMAND_TYPE_PUPPET_SPAWNING; //command->type;
+                        cmdBuffer.returns[qndex].returnUUID = 0;
                     }
-                    else fail = 1;
-
-                    if (fail) {
+                    else {
+                        // something went wrong, we won't be waiting for this actor
                         cmdBuffer.returns[qndex].data[0] = -1;
                         cmdBuffer.returns[qndex].data[1] = 0xDEADDEAD;
-                        cmdBuffer.returns[qndex].data[2] = fail;
-                        cmdBuffer.returns[qndex].data[3] = actorParams->uuid;
+                        cmdBuffer.returns[qndex].data[2] = actorParams->uuid;
                     }
                 }
 
@@ -98,6 +89,29 @@ __attribute__((aligned(0x20))) void CommandBuffer_Update(void* that) {
 
     // we iterated through all of the commands, assume there are no more commands to process
     cmdBuffer.count = 0;
+
+    for (index = 0; index < COMMAND_MAX; index++) {
+        rvalue = &cmdBuffer.returns[index];
+
+        switch (rvalue->type) {
+            // if actor is spawning
+            case COMMAND_TYPE_PUPPET_SPAWNING:
+                // search for entity using uuid
+                if (ActorManager_SearchByID(rvalue->data[0], &actorPointer)) {
+                    if (actorPointer) {
+                        rvalue->data[2] = rvalue->data[0]; // entity uuid
+                        rvalue->returnUUID = rvalue->data[1];
+                        rvalue->type = COMMAND_TYPE_PUPPET_SPAWN;
+                        rvalue->data[0] = actorPointer;
+                        rvalue->data[1] = 0xBEEFBEEF;
+                    }
+                }
+                else {
+                    rvalue->data[2]++; // Another frame without the actor
+                }
+                break;
+        }
+    }
 
     return;
 }
