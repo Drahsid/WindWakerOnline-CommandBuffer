@@ -65,9 +65,7 @@ __attribute__((aligned(0x20))) uint32_t CommandBuffer_Update(void* that) {
                         request = f_pc_stdcreate_req__Request(layer, 0xB5, 0, 0, actorParams);
 
                         if (actorParams) {
-                            asm("nop");
                             retCommand->data[0] = actorParams->uuid; // store this, it might be useful for the future
-                            asm("nop");
                             retCommand->data[1] = command->returnUUID; // shovel return uuid into data so wwo doesn't think it is ready
                             retCommand->data[2] = 0; // use as a framecount
                             retCommand->type = COMMAND_TYPE_PUPPET_SPAWNING; //command->type;
@@ -104,18 +102,6 @@ __attribute__((aligned(0x20))) uint32_t CommandBuffer_Update(void* that) {
                 // if actor is spawning
                 case COMMAND_TYPE_PUPPET_SPAWNING:
                     // search for entity using uuid
-                    /*if (ActorManager_SearchByID(retCommand->data[0], &actorPointer)) {
-                        if (actorPointer) {
-                            retCommand->data[2] = retCommand->data[0]; // entity uuid
-                            retCommand->returnUUID = retCommand->data[1];
-                            retCommand->type = COMMAND_TYPE_PUPPET_SPAWN;
-                            retCommand->data[0] = actorPointer;
-                            retCommand->data[1] = 0xBEEFBEEF;
-                        }
-                    }
-                    else {
-                        retCommand->data[2]++; // Another frame without the actor
-                    }*/
 
                     // reusing request, effectively is a boolean for the isCreating call
                     request = f_pc_manager__IsCreating(retCommand->data[0]);
