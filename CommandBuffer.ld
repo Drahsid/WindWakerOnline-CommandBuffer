@@ -11,6 +11,7 @@ SECTIONS
     ActorManager_Create = 0x8002451C;
     ActorManager_CreateFast = 0x80024614;
     f_pc_layer__CurrentLayer = 0x8003D96C;
+    f_pc_manager__FastCreate = 0x8003EDCC;
     f_pc_stdcreate_req__Request = 0x8004086C;
     dCcS_Move = 0x800AE81C;
 

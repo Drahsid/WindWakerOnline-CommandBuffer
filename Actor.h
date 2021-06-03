@@ -9,31 +9,33 @@ extern struct ActorManager_Params* ActorManager_CreateAppend(uint32_t parameters
 extern void Actor_Despawn(void* this);
 extern uint32_t ActorManager_Create(int16_t procName, uint32_t parameters, Vec3f* pPos, int roomNo, Vec3s* pAngle, Vec3f* pScale, uint8_t subtype, void* param_8);
 extern uint32_t ActorManager_CreateFast(uint16_t actorID, uint32_t parameters, Vec3f* pPos, int roomNo, Vec3s* pAngle, Vec3f* pScale, uint8_t subtype, void* pCallBack, void* pCallBackUserData);
+extern uint32_t f_pc_manager__FastCreate(uint16_t actorID, void* pCallBack, void* pCallBackUserData, struct ActorManager_Params* params);
 extern uint32_t f_pc_layer__CurrentLayer(void);
 extern uint32_t f_pc_stdcreate_req__Request(uint32_t param_1, int16_t param_2,uint32_t param_3, uint32_t param_4, uint32_t param_5);
 
-typedef enum GbaNames {
-    Bokoblin = 1,
-    Stalfos = 4,
-    Magtail = 5,
-    YellowChuChu = 10,
-    DarkChuChu = 16,
-    RedChuChu = 21,
-    GreenChuChu = 22,
-    Rat = 24,
-    BlueChuChu = 30,
-    PushableBlock = 61
-} GbaNames;
+enum {
+    GBANAME_BOKONLIN = 1,
+    GBANAME_STALFOS = 4,
+    GBANAME_MAGTAIL = 5,
+    GBANAME_YELLOWCHUCHU = 10,
+    GBANAME_DARKCHUCHU = 16,
+    GBANAME_REDCHUCHU = 21,
+    GBANAME_GREENCHUCHU = 22,
+    GBANAME_RAT = 24,
+    GBANAME_BLUECHUCHU = 30,
+    GBANAME_PUSHABLEBLOCK = 61
+};
 
+// why is this compiled with wrong offsets??
 typedef struct {
-    /* 0x00 */ long parameters;
+    /* 0x00 */ uint32_t parameters;
     /* 0x04 */ Vec3f pos;
     /* 0x10 */ Vec3s rot;
-    /* 0x16 */ uint16_t enemyNo;
-    /* 0x18 */ uint8_t scaleX;
-    /* 0x19 */ uint8_t scaleY;
-    /* 0x1A */ uint8_t scaleZ;
-    /* 0x1B */ enum GbaNames gbaName;
+    /* 0x16 */ int16_t enemyNo;
+    /* 0x18 */ int8_t scaleX;
+    /* 0x19 */ int8_t scaleY;
+    /* 0x1A */ int8_t scaleZ;
+    /* 0x1B */ int8_t gbaIndex;
     /* 0x1C */ uint32_t parentPcId;
     /* 0x20 */ uint8_t subtype;
     /* 0x21 */ uint8_t roomNo;

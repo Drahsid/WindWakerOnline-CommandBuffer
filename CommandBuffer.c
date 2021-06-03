@@ -14,12 +14,10 @@ void CommandBuffer_Update(void*);
 __attribute__((aligned(0x20))) void CommandBuffer_Update(void* that) {
     uint32_t index;
     uint32_t qndex;
-    uint32_t layer;
-    uint32_t request;
     uint32_t actorPointer = 0;
     ActorManager_Params* actorParams = 0;
     Command* command;
-    CommandReturn* rvalue;
+    CommandReturn* retCommand;
 
     // Since we are codecaving this function call, we need to actually call it with its original arguments before doing our stuff
     dCcS_Move(that);
@@ -42,6 +40,7 @@ __attribute__((aligned(0x20))) void CommandBuffer_Update(void* that) {
                     // if the uuid in this slot is 0
                     if (cmdBuffer.returns[qndex].returnUUID == 0) {
                         // we will use this slot
+                        retCommand = &cmdBuffer.returns[qndex];
                         break;
                     }
                 }
@@ -52,25 +51,30 @@ __attribute__((aligned(0x20))) void CommandBuffer_Update(void* that) {
                         This way sucks, we're doing it manually
                         // set the return pointer to the result of Actor_Spawn
                         //cmdBuffer.returns[qndex].data[0] = Actor_Spawn(0xB5, 0, (Vec3f*)0x803E440C, *((uint8_t*)0x803F6A78), 0, 0, 0, 0);
+
+                        This way also sucks because it doesn't work, still doing it manually
+                        //actorPointer = ActorManager_CreateFast(0xB5, 0, (Vec3f*)0x803E440C, *((uint8_t*)0x803F6A78), 0, 0, 0, 0, 0);
                     */
 
-                    actorParams = ActorManager_CreateAppend(0, (Vec3f*)0x803E440C, *((uint8_t*)0x803F6A78), 0, 0, 0, 0xFFFFFFFF);
-                    layer = f_pc_layer__CurrentLayer();
-                    request = f_pc_stdcreate_req__Request(layer, 0xB5, 0, 0, actorParams);
+                    retCommand->returnUUID = command->returnUUID;
+                    retCommand->type = COMMAND_TYPE_PUPPET_SPAWN;
+                    retCommand->data[0] = -1;
+                    retCommand->data[1] = 0xDEADDEAD;
 
-                    // prepare to wait for actor spawn
-                    if (actorParams) {
-                        cmdBuffer.returns[qndex].data[0] = actorParams->uuid; // store this, it might be useful for the future
-                        cmdBuffer.returns[qndex].data[1] = command->returnUUID; // shovel return uuid into data so wwo doesn't think it is ready
-                        cmdBuffer.returns[qndex].data[2] = 0; // use as a framecount
-                        cmdBuffer.returns[qndex].type = COMMAND_TYPE_PUPPET_SPAWNING; //command->type;
-                        cmdBuffer.returns[qndex].returnUUID = 0;
+                    actorParams = ActorManager_CreateAppend(0, (Vec3f*)0x803E440C, *((uint8_t*)0x803F6A78), 0, 0, 0, 0xFFFFFFFF);
+                    if (actorParams == 0) {
+                        retCommand->data[2] = 1;
                     }
                     else {
-                        // something went wrong, we won't be waiting for this actor
-                        cmdBuffer.returns[qndex].data[0] = -1;
-                        cmdBuffer.returns[qndex].data[1] = 0xDEADDEAD;
-                        cmdBuffer.returns[qndex].data[2] = actorParams->uuid;
+                        actorPointer = f_pc_manager__FastCreate(0xB5, 0, 0, actorParams);
+                        retCommand->data[3] = (uint32_t)actorParams;
+                        if (actorPointer) {
+                            retCommand->data[0] = actorPointer;
+                            retCommand->data[1] = 0xBEEFBEEF;
+                        }
+                        else {
+                            retCommand->data[2] = 2;
+                        }
                     }
                 }
 
@@ -89,29 +93,6 @@ __attribute__((aligned(0x20))) void CommandBuffer_Update(void* that) {
 
     // we iterated through all of the commands, assume there are no more commands to process
     cmdBuffer.count = 0;
-
-    for (index = 0; index < COMMAND_MAX; index++) {
-        rvalue = &cmdBuffer.returns[index];
-
-        switch (rvalue->type) {
-            // if actor is spawning
-            case COMMAND_TYPE_PUPPET_SPAWNING:
-                // search for entity using uuid
-                if (ActorManager_SearchByID(rvalue->data[0], &actorPointer)) {
-                    if (actorPointer) {
-                        rvalue->data[2] = rvalue->data[0]; // entity uuid
-                        rvalue->returnUUID = rvalue->data[1];
-                        rvalue->type = COMMAND_TYPE_PUPPET_SPAWN;
-                        rvalue->data[0] = actorPointer;
-                        rvalue->data[1] = 0xBEEFBEEF;
-                    }
-                }
-                else {
-                    rvalue->data[2]++; // Another frame without the actor
-                }
-                break;
-        }
-    }
 
     return;
 }
