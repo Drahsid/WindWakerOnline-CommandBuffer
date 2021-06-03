@@ -19,6 +19,8 @@ SECTIONS
     f_pc_stdcreate_req__Request = 0x8004086C;
     dCcS_Move = 0x800AE81C;
 
+    memcpy = 0x802528A4;
+
     . = 0x81800000;
     CommandBuffer_Update = 0x81800000;
 

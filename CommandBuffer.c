@@ -10,6 +10,7 @@ extern "C" {
 
 extern void dCcS_Move(void* this); // use for caving draw
 extern void* f_op_overlap_mng__IsPeek(void); // use for caving execute
+extern int32_t memcpy(void* dest, void*  src, uint32_t length);
 
 uint32_t CommandBuffer_Update(void*);
 
@@ -64,10 +65,14 @@ __attribute__((aligned(0x20))) uint32_t CommandBuffer_Update(void* that) {
                         layer = f_pc_layer__CurrentLayer();
                         request = f_pc_stdcreate_req__Request(layer, 0xB5, 0, 0, actorParams);
 
+                        // debug
+                        memcpy(0x81808000, actorParams, 0x100);
+
                         if (actorParams) {
                             retCommand->data[0] = actorParams->uuid; // store this, it might be useful for the future
                             retCommand->data[1] = command->returnUUID; // shovel return uuid into data so wwo doesn't think it is ready
                             retCommand->data[2] = 0; // use as a framecount
+                            retCommand->data[3] = -1; // used for error and safety
                             retCommand->type = COMMAND_TYPE_PUPPET_SPAWNING; //command->type;
                             retCommand->returnUUID = 0;
                         }
@@ -105,7 +110,17 @@ __attribute__((aligned(0x20))) uint32_t CommandBuffer_Update(void* that) {
 
                     // reusing request, effectively is a boolean for the isCreating call
                     request = f_pc_manager__IsCreating(retCommand->data[0]);
-                    if (request) {
+                    retCommand->data[2]++;
+                    if (retCommand->data[3] == -1) {
+                        if (request) retCommand->data[3] = 0;
+                    }
+                    else {
+                        // Still waiting???
+                        if (request) {
+                            retCommand->data[3] = 0x00BADBAD;
+                        }
+
+                        // assume we can just get the actor pointer at this point
                         actorPointer = f_op_actor_iter__Judge(f_pc_searcher__JudgeByID, retCommand->data[0]);
 
                         if (actorPointer) {
@@ -116,13 +131,8 @@ __attribute__((aligned(0x20))) uint32_t CommandBuffer_Update(void* that) {
                             retCommand->data[1] = 0xBEEFBEEF;
                         }
                         else {
-                            retCommand->data[2]++;
                             retCommand->data[3] = 2;
                         }
-                    }
-                    else {
-                        retCommand->data[2] = -1;
-                        retCommand->data[3] = 1;
                     }
 
                     break;
