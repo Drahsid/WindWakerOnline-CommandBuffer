@@ -5,18 +5,18 @@ extern "C" {
 #include "inttypes.h"
 #include "Command.h"
 #include "CommandBuffer.h"
+#include "Request.h"
 
 __attribute__((aligned(0x20))) uint32_t CommandBuffer_Update(void* that) {
     uint32_t index;
     uint32_t qndex;
     uint32_t layer;
-    uint32_t request;
     uint32_t returnIsPeek;
-    uint32_t temp;
     uint32_t actorPointer = 0;
-    ActorManager_Params* actorParams = 0;
+    uint32_t actorParams = 0;
     Command* command = 0;
     CommandReturn* retCommand = 0;
+    CreateRequest* request;
 
     // Since we are codecaving this function call, we need to actually call it with its original arguments before doing our stuff
 #ifdef USE_DRAW_CODECAVE
@@ -55,12 +55,11 @@ __attribute__((aligned(0x20))) uint32_t CommandBuffer_Update(void* that) {
                         // use CreateAppend to get the game's unique id to detect when the actor is supposed to be spawned
                         // we are spawning at Link's location, in Link's room
                         actorParams = ActorManager_CreateAppend(0, (Vec3f*)0x803E440C, *((uint8_t*)0x803F6A78), 0, 0, 0, 0xFFFFFFFF);
-                        temp = actorParams->uuid; // this also didn't work
                         layer = f_pc_layer__CurrentLayer();
                         request = f_pc_stdcreate_req__Request(layer, 0xB5, 0, 0, actorParams);
 
-                        if (actorParams) {
-                            retCommand->data[0] = temp; // store this, it might be useful for the future
+                        if (request) {
+                            retCommand->data[0] = request->uuid; // store this, it might be useful for the future
                             retCommand->data[1] = command->returnUUID; // shovel return uuid into data so wwo doesn't think it is ready
                             retCommand->data[2] = 0; // use as a framecount
                             retCommand->data[3] = -1; // used for error and safety
@@ -71,7 +70,7 @@ __attribute__((aligned(0x20))) uint32_t CommandBuffer_Update(void* that) {
                             // something went wrong, we won't be waiting for this actor
                             retCommand->data[0] = -1;
                             retCommand->data[1] = 0xDEADDEAD;
-                            retCommand->data[2] = temp;
+                            retCommand->data[2] = request->uuid;
                         }
                     }
 
