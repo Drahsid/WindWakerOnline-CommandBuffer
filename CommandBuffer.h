@@ -1,11 +1,11 @@
-#ifdef _LANGUAGE_C_PLUS_PLUS
-extern "C" {
-#endif
+#ifndef COMMANDBUFFER_H
+#define COMMANDBUFFER_H
 
 #include "inttypes.h"
 #include "Actor.h"
 #include "Command.h"
 
+#define OFFSETOF(TYPE, ELEMENT) ((uint32_t)&(((TYPE*)0)->ELEMENT))
 #define COMMAND_MAX 64
 
 typedef struct {
@@ -17,6 +17,12 @@ typedef struct {
 
 extern CommandBuffer cmdBuffer;
 
-#ifdef _LANGUAGE_C_PLUS_PLUS
-}
+extern void dCcS_Move(void* this); // use for caving draw
+extern void* f_op_overlap_mng__IsPeek(void); // use for caving execute
+extern int32_t memcpy(void* dest, void*  src, uint32_t length);
+
+uint32_t CommandBuffer_Update(void*);
+
+
 #endif
+
