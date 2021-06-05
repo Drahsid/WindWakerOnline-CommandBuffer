@@ -35,8 +35,8 @@ typedef struct {
 typedef struct {
     /* 0x00 */ uint32_t type; // original type of command
     /* 0x04 */ uint32_t returnUUID; // uuid of command, nonzero if applicable
-    /* 0x08 */ uint32_t data[4]; // data returned by command
-} CommandReturn; /* sizeof = 0x18 */
+    /* 0x08 */ uint32_t data[8]; // data returned by command
+} CommandReturn; /* sizeof = 0x28 */
 
 #endif
 

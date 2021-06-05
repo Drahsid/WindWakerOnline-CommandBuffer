@@ -14,9 +14,9 @@ __attribute__((aligned(0x20))) uint32_t CommandBuffer_Update(void* that) {
     uint32_t returnIsPeek;
     uint32_t actorPointer = 0;
     uint32_t actorParams = 0;
+    uint32_t request;
     Command* command = 0;
     CommandReturn* retCommand = 0;
-    CreateRequest* request;
 
     // Since we are codecaving this function call, we need to actually call it with its original arguments before doing our stuff
 #ifdef USE_DRAW_CODECAVE
@@ -59,10 +59,13 @@ __attribute__((aligned(0x20))) uint32_t CommandBuffer_Update(void* that) {
                         request = f_pc_stdcreate_req__Request(layer, 0xB5, 0, 0, actorParams);
 
                         if (request) {
-                            retCommand->data[0] = request->uuid; // store this, it might be useful for the future
-                            retCommand->data[1] = command->returnUUID; // shovel return uuid into data so wwo doesn't think it is ready
-                            retCommand->data[2] = 0; // use as a framecount
-                            retCommand->data[3] = -1; // used for error and safety
+                            retCommand->data[0] = 0;
+                            retCommand->data[1] = 0;
+                            retCommand->data[3] = 0;
+                            retCommand->data[4] = request; // entity uuid
+                            retCommand->data[5] = command->returnUUID; // shovel return uuid into data so wwo doesn't think it is ready
+                            retCommand->data[6] = 0; // use as a framecount
+                            retCommand->data[7] = -1; // used for error and safety
                             retCommand->type = COMMAND_TYPE_PUPPET_SPAWNING; //command->type;
                             retCommand->returnUUID = 0;
                         }
@@ -70,7 +73,7 @@ __attribute__((aligned(0x20))) uint32_t CommandBuffer_Update(void* that) {
                             // something went wrong, we won't be waiting for this actor
                             retCommand->data[0] = -1;
                             retCommand->data[1] = 0xDEADDEAD;
-                            retCommand->data[2] = request->uuid;
+                            retCommand->data[3] = 0;
                         }
                     }
 
@@ -99,30 +102,25 @@ __attribute__((aligned(0x20))) uint32_t CommandBuffer_Update(void* that) {
                     // search for entity using uuid
 
                     // reusing request, effectively is a boolean for the isCreating call
-                    request = f_pc_manager__IsCreating(retCommand->data[0]);
-                    retCommand->data[2]++;
-                    if (retCommand->data[3] == -1) {
-                        if (request) retCommand->data[3] = 0;
-                    }
-                    else {
-                        // Still waiting???
-                        if (request) {
-                            retCommand->data[3] = 0x00BADBAD;
-                        }
-
+                    retCommand->data[6]++;
+                    request = f_pc_manager__IsCreating(retCommand->data[4]);
+                    if (request == 0) {
                         // assume we can just get the actor pointer at this point
-                        actorPointer = f_op_actor_iter__Judge(f_pc_searcher__JudgeByID, retCommand->data[0]);
+                        //actorPointer = f_op_actor_iter__Judge(f_pc_searcher__JudgeByID, &retCommand->data[4]);
+                        ActorManager_SearchByID(retCommand->data[4], &actorPointer);
 
                         if (actorPointer) {
-                            retCommand->data[2] = retCommand->data[0]; // entity uuid
-                            retCommand->returnUUID = retCommand->data[1];
+                            retCommand->returnUUID = retCommand->data[5];
                             retCommand->type = COMMAND_TYPE_PUPPET_SPAWN;
                             retCommand->data[0] = actorPointer;
                             retCommand->data[1] = 0xBEEFBEEF;
                         }
                         else {
-                            retCommand->data[3] = 2;
+                            retCommand->data[3] = 0x00BADBAD;
                         }
+                    }
+                    else {
+                        retCommand->data[3] = 0xDEADBEEF;
                     }
 
                     break;
